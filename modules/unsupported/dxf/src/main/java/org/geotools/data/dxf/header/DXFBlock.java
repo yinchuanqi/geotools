@@ -87,7 +87,8 @@ public class DXFBlock extends DXFEntity implements DXFConstants {
                         doLoop = false;
                         br.reset();
                     } else if (type.equals(INSERT)) {
-                        DXFInsert.read(br, univers);
+                        DXFInsert dxfInsert = DXFInsert.read(br, univers);
+                        sEnt.add(dxfInsert);
                     } else {
                         // check of dit entities zijn
                         br.reset();

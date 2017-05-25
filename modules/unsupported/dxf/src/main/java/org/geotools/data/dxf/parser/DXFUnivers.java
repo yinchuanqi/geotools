@@ -187,94 +187,16 @@ public class DXFUnivers implements DXFConstants {
 
     // Use only once!
     public void updateRefBlock() {
-        DXFBlockReference bro = null;
-        int numInserts = 0;
-
-        for (int i = 0; i < _entForUpdate.size(); i++) {
-            bro = _entForUpdate.get(i);
-            boolean isInsert = false;
-
-            if (bro instanceof DXFInsert) {
-                numInserts++;
-                isInsert = true;
-            }
-
-            if (!insertsFound.containsKey(bro._blockName)) {
-                insertsFound.put(bro._blockName, false);
-            }
-
-            DXFBlock b = findBlock(bro._blockName);
-
-            if (b != null && bro.getType() != GeometryType.UNSUPPORTED) {
-                double x = b._point.X();
-                double y = b._point.Y();
-
-                if (isInsert) {
-                    DXFPoint entPoint = ((DXFInsert) bro)._point;
-                    x = entPoint._point.getX();
-                    y = entPoint._point.getY();
-                }
-
-                Vector<DXFEntity> refBlockEntities = b.theEntities;
-                if (refBlockEntities != null) {
-                    Iterator it = refBlockEntities.iterator();
-                    while (it.hasNext()) {
-                        // Create clone if blockEntity is a insert
-                        DXFEntity e = ((isInsert) ? ((DXFEntity) it.next()).clone() : (DXFEntity) it.next());
-
-                        if (isInsert) {
-                            e.setBase(((DXFInsert) bro)._point.toCoordinate());
-                            e.setAngle(((DXFInsert) bro)._angle);
-                        }
-
-                        e.updateGeometry();
-                        theEntities.add(e);
-                    }
-                }
-            } else {
-                log.error("Can not update refblock: " + bro.getName() + " - " + bro._blockName + " at " + bro.getStartingLineNumber());
-            }
-
-            if (!isInsert) {
-                theEntities.remove(bro);
+        Vector<DXFEntity> subEntities = new Vector<DXFEntity>();
+        Vector<DXFEntity> entities = new Vector<DXFEntity>();
+        for(DXFEntity dxfEntity:theEntities){
+            if(dxfEntity instanceof DXFInsert){
+                DXFInsert dxfInsert = ((DXFInsert)dxfEntity);
+                dxfInsert._refBlock = findBlock(dxfInsert._blockName);
+                subEntities.addAll(dxfInsert.parseBlock(this));
             }
         }
-
-        // Set information
-        if (_entForUpdate.size() > 0) {
-            info += "Num of Blocks: " + _entForUpdate.size() + " of which Inserts: " + numInserts + "\n";
-            java.util.HashMap list = new java.util.HashMap();
-
-            // Count inserts in updateList
-            for (int i = 0; i < _entForUpdate.size(); i++) {
-                if (_entForUpdate.get(i) instanceof DXFInsert) {
-                    DXFInsert fg = (DXFInsert) _entForUpdate.get(i);
-                    String name = fg._blockName;
-
-                    if (!list.containsKey(name)) {
-                        list.put(name, 1);
-                    } else {
-                        list.put(name, ((Integer) list.get(name)) + 1);
-                    }
-                }
-            }
-
-            ArrayList arrayList = new ArrayList(list.keySet());
-            Collections.sort(arrayList);
-
-            for (java.util.Iterator iter = arrayList.iterator(); iter.hasNext();) {
-                String key = (String) iter.next();
-                String value = Integer.toString((Integer) list.get(key));
-                String found = ((Boolean) insertsFound.get(key) ? "" : (isFilteredInsert(key) ? "Filtered" : "Missing"));
-
-                key = makeTabs(key, 31);
-                value = makeTabs(value, 12);
-
-                info += key + value + found + "\n";
-            }
-        }
-
-        _entForUpdate.removeAllElements();
+        theEntities.addAll(subEntities);
     }
 
     public String getInfo() {

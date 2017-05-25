@@ -6,12 +6,16 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.algorithm.Angle;
 import org.geotools.data.GeometryType;
+import org.geotools.data.dxf.AffineTransform;
 import org.geotools.data.dxf.header.DXFBlockReference;
 import org.geotools.data.dxf.header.DXFLayer;
 import org.geotools.data.dxf.header.DXFLineType;
 import org.geotools.data.dxf.parser.DXFColor;
 import org.geotools.data.dxf.parser.DXFConstants;
 import org.geotools.data.dxf.parser.DXFUnivers;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 public abstract class DXFEntity implements DXFConstants {
@@ -34,7 +38,14 @@ public abstract class DXFEntity implements DXFConstants {
     protected double _thickness;
     protected boolean visible = true;
     private double _entRotationAngle = 0.0;
+    protected double xScale = 1;
+    protected double yScale = 1;
     protected Coordinate _entBase = new Coordinate(0.0, 0.0);
+
+    /**
+     * transform list when a insert is block,and the block include another block，it is a nest block
+     */
+    protected List<AffineTransform> transforms = new ArrayList<AffineTransform>();
 
     public DXFEntity(DXFEntity newEntity) {
         this(newEntity.getColor(), newEntity.getRefLayer(), 1, newEntity.getLineType(), newEntity.getThickness());
@@ -90,6 +101,11 @@ public abstract class DXFEntity implements DXFConstants {
             coordarray[i] = rotateCoordDegrees(coordarray[i], _entRotationAngle);
             coordarray[i].x += _entBase.x;
             coordarray[i].y += _entBase.y;
+            if(transforms.size()>0){
+                for(int j=transforms.size()-1;j>=0;j--){
+                    coordarray[i] = transforms.get(j).transform(coordarray[i]);
+                }
+            }
         }
         return coordarray;
     }
@@ -261,5 +277,13 @@ public abstract class DXFEntity implements DXFConstants {
 
     public void setGeometry(Geometry geometry) {
         this.geometry = geometry;
+    }
+
+    public List<AffineTransform> getTransforms() {
+        return transforms;
+    }
+
+    public void setTransforms(List<AffineTransform> transforms) {
+        this.transforms = transforms;
     }
 }
